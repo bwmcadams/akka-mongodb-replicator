@@ -68,12 +68,25 @@ class MongoReplicatorExtension(implicit val system: ExtendedActorSystem) extends
     /** The replicator is a Iterator over the data in the oplog and shouldn't ever end... */
     val replicator = new MongoOpLog(mongo, startTimestamp = None, namespace = ns, replicaSet = isRS)
 
+
+    val threadRunner = system match {
+      case asi: ActorSystemImpl => (r: Runnable) => {
+        log.debug("Is an ActorSytemImpl, ideal running situation.")
+        asi.threadFactory.newThread(r).run()
+      }
+      case default => (r: Runnable) => {
+        log.debug("No ASI, running in defaultExecutionContext")
+        akka.dispatch.ExecutionContext.defaultExecutionContext.execute(r)
+      }
+    }
+
+
     val monitor = new Runnable {
       override def run() = {
         if (fullResync) {
           for (doc: DBObject <- mongo(db.get)(collection.get)) {
             val obj = new MongoInsertOperation(new BSONTimestamp, opID = Some(-1), namespace = ns.get, document = doc)
-            log.debug("Constructed a pseduo Insert Entry {}", obj)
+            log.debug("Constructed a pseudo Insert Entry {}", obj)
             receiver ! obj
           }
         }
@@ -85,7 +98,8 @@ class MongoReplicatorExtension(implicit val system: ExtendedActorSystem) extends
       }
     }
 
-    akka.dispatch.ExecutionContext.defaultExecutionContext.execute(monitor)
+
+    threadRunner(monitor)
   }
 
 

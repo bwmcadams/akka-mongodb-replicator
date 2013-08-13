@@ -40,20 +40,34 @@ class MongoReplicatorExtensionSpec(_system: ActorSystem) extends TestKit(_system
 
     m.drop()
 
-    for (x <- 1 to 100) {
+    for (x <- 1 until 10) {
       val doc = MongoDBObject("x" -> x * 1.0)
       m += doc
-    }
-
-    for (doc <- m) {
-      val x = doc.as[Double]("x")
-      m.update(MongoDBObject("_id" -> doc("_id")), MongoDBObject("x" -> x  * 5.2))
     }
 
 
     val receiver = _system.actorOf(Props(new TestReplicatorActor))
 
     val replicator = MongoReplicatorExtension(_system).replicate(receiver, Some("test"), Some("validateReplicator"), true)
+
+    println("foo")
+
+    for (x <- 10 to 50) {
+      val doc = MongoDBObject("y" -> x * 3.14)
+      m += doc
+    }
+
+    for (doc <- m.find("x" $exists true)) {
+      val x = doc.as[Double]("x")
+      m.update(MongoDBObject("_id" -> doc("_id")), MongoDBObject("x_u" -> x  * 4.2))
+    }
+
+    for (doc <- m.find("y" $exists true)) {
+      val x = doc.as[Double]("y")
+      m.update(MongoDBObject("_id" -> doc("_id")), MongoDBObject("y_u" -> x  * 4.2))
+    }
+
+    Thread.sleep(10,000) // lazy manually verified test is lazy.
 
     replicator must not beNull
 
@@ -67,13 +81,13 @@ object MongoReplicatorTest {
   class TestReplicatorActor extends Actor {
     def receive = {
       case MongoInsertOperation(tsp, Some(-1L), ns, doc) =>
-        println("FULL RESYNC DOC: " + doc)
+        println("[REPLCLIENT] FULL RESYNC DOC: " + doc)
       case ins @ MongoInsertOperation(tsp, opId, ns, doc) =>
-        println("Inserted Document: " + ins)
+        println("[REPLCLIENT] Inserted Document: " + ins)
       case upd @ MongoUpdateOperation(tsp, opId, ns, doc, documentID) =>
-        println("Updated Document with ID '%s': '%s'".format(documentID, doc))
+        println("[REPLCLIENT] Updated Document with ID '%s': '%s'".format(documentID, doc))
       case del @ MongoDeleteOperation(tsp, opID, ns, doc) =>
-        println("Deleted Document: '%s'".format(doc))
+        println("[REPLCLIENT] Deleted Document: '%s'".format(doc))
       case other =>
         throw new IllegalArgumentException("Invalid replication feed in? " + other)
     }
