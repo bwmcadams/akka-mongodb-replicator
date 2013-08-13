@@ -86,7 +86,6 @@ object MongoReplicatorTest {
 
       mongodb.replicator {
         uri = "mongodb://localhost:27017"
-        isReplicaSet = false
       }
     }
     """.stripMargin)

@@ -21,9 +21,7 @@ class MongoReplicatorExtension(implicit val system: ExtendedActorSystem) extends
 
   lazy val defaultConfig = ConfigFactory.parseString(
     """
-     akka.mongodb.replicator {
-      isReplicaSet = true
-     }
+    isReplicaSet = true
     """.stripMargin)
   /** A full MongoURI containing the server to connect to. We will ignore any DB + Collection names,
     * as those are provided at initialisation time.
