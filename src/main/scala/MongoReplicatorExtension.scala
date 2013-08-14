@@ -66,7 +66,7 @@ class MongoReplicatorExtension(implicit val system: ExtendedActorSystem) extends
     }
 
     /** The replicator is a Iterator over the data in the oplog and shouldn't ever end... */
-    val replicator = new MongoOpLog(mongo, startTimestamp = None, namespace = ns, replicaSet = isRS)
+    val replicator = new MongoOpLog(mongo, startTimestamp = Some(new BSONTimestamp), namespace = ns, replicaSet = isRS)
 
 
     val threadRunner = system match {
